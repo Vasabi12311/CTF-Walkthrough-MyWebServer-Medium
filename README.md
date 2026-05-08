@@ -46,3 +46,27 @@ After analyzing the scan results, several high-priority attack surfaces were ide
 4.  **Port 80 (WordPress / armour.local):**
     *   **Status:** Detected `/wp-admin/` in `robots.txt`. Requires local DNS resolution (adding `armour.local` to `/etc/hosts`) for proper enumeration.
     *   **Priority:** Medium.
+
+## 🔍 Phase 2: Web Enumeration (Port 80)
+
+### Vulnerability Scanning
+Since Port 80 revealed a WordPress installation, I performed an aggressive scan using `wpscan` to identify themes, plugins, and potential users.
+
+```bash
+wpscan --url [http://www.armour.local/](http://www.armour.local/) --enumerate vp,vt,u --plugins-detection aggressive --random-user-agent --ignore-main-redirect
+
+```
+
+**Key Findings:**
+
+* **WordPress Version:** 5.3.21 (Outdated).
+* **Theme:** `rife-free` version 2.4.7.
+* **Directory Listing:** Enabled on `/wp-content/uploads/` (Information Disclosure).
+* **User Enumeration:** Successfully identified a valid username: `ap20dsero039`.
+
+### Analysis of WPScan Results
+
+While the scan confirmed the site is outdated, no immediate high-criticality plugin vulnerabilities were found. However, gaining a valid username (`ap20dsero039`) provides a pivot point for credential attacks or lateral movement if this username is reused across other services like **SSH** or **MySQL**.
+
+> **Note:** Brute-forcing the WordPress login was deemed inefficient at this stage. Moving focus to other high-priority services identified in the initial Nmap scan.
+
