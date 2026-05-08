@@ -1,2 +1,48 @@
 # CTF-Walkthrough-MyWebServer-Medium
 Writeup for "My Web Server" (Medium) CTF. Detailed penetration testing process covering enumeration, web exploitation, and privilege escalation. 
+![Difficulty: Medium](https://img.shields.io/badge/Difficulty-Medium-orange)
+![Category: Web/Linux](https://img.shields.io/badge/Category-Web%2FLinux-blue)
+## 🔍 Phase 1: Enumeration
+
+### Host Discovery
+First, I identified the target machine's IP address on the local network using an Nmap ping scan.
+
+```bash
+nmap -sn 192.168.0.1/24
+
+Target IP Found: 192.168.0.102 (identified by Oracle VirtualBox MAC address).
+Service Scanning
+
+A full TCP port scan was performed to identify open services and their versions.
+Bash
+
+nmap -p- -sC -sV 192.168.0.102
+
+Open Ports & Services:
+Port	Service	Version	Observations
+22	SSH	OpenSSH 7.9p1	Standard SSH access.
+80	HTTP	Apache 2.4.38	Contains robots.txt with /wp-admin/ (WordPress?).
+2222	HTTP	Nostromo 1.9.6	Interesting: Rare web server version.
+3306	MySQL	MySQL	Unauthorized access (standard behavior).
+8009	AJP13	Apache Jserv	Used for communication with Tomcat.
+8080	HTTP	Tomcat 8.0.33	Apache Tomcat manager/apps might be here.
+8081	HTTP	Nginx 1.14.2	Another web service, likely a static site.
+### Service Analysis & Potential Attack Vectors
+
+After analyzing the scan results, several high-priority attack surfaces were identified:
+
+1.  **Port 2222 (Nostromo 1.9.6):**
+    *   **Vulnerability:** Known for **CVE-2019-16278** (Directory Traversal leading to Remote Code Execution).
+    *   **Priority:** Critical. This is a likely entry point for a Reverse Shell.
+
+2.  **Port 8009 (AJP13):**
+    *   **Vulnerability:** Suspected **Ghostcat (CVE-2020-1938)** vulnerability due to the legacy Apache Jserv version.
+    *   **Priority:** High. Could allow arbitrary file reading (e.g., `WEB-INF/web.xml` for credentials).
+
+3.  **Port 8080 (Apache Tomcat 8.0.33):**
+    *   **Vulnerability:** Older version of Tomcat. Potential for administrative panel access via brute-force or default credentials (`tomcat:tomcat`, `admin:admin`).
+    *   **Priority:** Medium.
+
+4.  **Port 80 (WordPress / armour.local):**
+    *   **Status:** Detected `/wp-admin/` in `robots.txt`. Requires local DNS resolution (adding `armour.local` to `/etc/hosts`) for proper enumeration.
+    *   **Priority:** Medium.
