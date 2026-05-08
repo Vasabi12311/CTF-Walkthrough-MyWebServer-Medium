@@ -1,3 +1,11 @@
+<p align="center">
+  <img src="https://capsule-render.vercel.app/render?type=wave&color=auto&height=200&section=header&text=Vadim%20Krohmal&fontSize=90" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Focus-Offensive_Security-red?style=for-the-badge&logo=kali-linux" />
+  <img src="https://img.shields.io/badge/Status-Student_@_Karazin_Uni-blue?style=for-the-badge" />
+</p>
 # 🚩 CTF Walkthrough: MyWebServer (Medium)
 
 Detailed penetration testing report for the **My Web Server** machine. This walkthrough covers comprehensive enumeration, web exploitation, and initial access vectors.
